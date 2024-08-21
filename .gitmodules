@@ -1,4 +1,3 @@
 [submodule "ceres-solver"]
 	path = ceres-solver
 	url = https://github.com/ceres-solver/ceres-solver.git
-    branch = 8533139
