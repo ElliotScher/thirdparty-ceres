@@ -1,0 +1,211 @@
+import java.security.MessageDigest
+
+apply plugin: 'maven-publish'
+
+publishing {
+    repositories {
+        maven {
+            url "${System.getProperty('user.home')}/releases/maven/development"
+        }
+        maven {
+            url "${System.getProperty('user.home')}/releases/maven/release"
+        }
+    }
+}
+
+def pubVersion = "${project.ext.version}-1"
+
+def outputsFolder = file("$project.buildDir/outputs")
+
+def baseArtifactId = 'ceres'
+def artifactGroupId = 'edu.wpi.first.thirdparty.frc2024.ceres'
+def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2024_ceres_ID_ceres-cpp_CLS'
+
+def versionFile = file("$outputsFolder/version.txt")
+
+task outputVersions() {
+    description = 'Prints the versions of this to a file for use by the downstream packaging project'
+    group = 'Build'
+    outputs.files(versionFile)
+
+    doFirst {
+        buildDir.mkdir()
+        outputsFolder.mkdir()
+    }
+
+    doLast {
+        versionFile.write pubVersion
+    }
+}
+
+build.dependsOn outputVersions
+copyAllOutputs.dependsOn outputVersions
+copyAllOutputs.inputs.file versionFile
+copyAllOutputs.from versionFile
+
+task cppSourcesZip(type: Zip, dependsOn: make) {
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
+    archiveClassifier = "sources"
+
+    from(licenseFile) {
+        into '/'
+    }
+
+    from('/vcpkg/buildtrees') {
+        into '/source'
+        include '**/*.cpp', '**/*.cc'
+    }
+
+    includeEmptyDirs = false
+}
+
+task cppHeadersZip(type: Zip, dependsOn: make) {
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
+    archiveClassifier = "headers"
+
+    from(licenseFile) {
+        into '/'
+    }
+
+    from('/vcpkg/buildtrees') {
+        into '/include'
+        include '**/*.hpp', '**/*.h'
+    }
+
+    includeEmptyDirs = false
+}
+
+def baseDir = file('/vcpkg/installed/')
+def knownSubdirName = 'vcpkg'
+
+def triplet = baseDir.listFiles().find { file ->
+    file.isDirectory() && file.name != knownSubdirName
+}
+
+
+['', 'Debug' ].each{ buildType ->
+
+    def staticBuildDir = buildType.contains('Debug') ? project.cmakeBuildDebugDirectory : project.cmakeBuildDirectory
+
+    def outputClassifier = project.ext.platformClassifier
+    def outputClassifierStatic = project.ext.platformClassifier + 'static'
+    if (buildType.contains('Debug')) {
+        outputClassifier = outputClassifier + 'debug'
+        outputClassifierStatic = outputClassifierStatic + 'debug'
+    }
+
+    def buildTypeFolder = buildType.contains('Debug') ? 'Debug' : 'Release'
+
+    project.tasks.create('cppLibsZipStatic' + buildType, Zip) {
+        dependsOn tasks.named('nativeLibLinks' + buildType)
+        destinationDirectory = outputsFolder
+        archiveClassifier = outputClassifierStatic
+        archiveBaseName = zipBaseName
+        duplicatesStrategy = 'exclude'
+
+        manifest {
+            attributes(
+                    "Created-By": "WPILib Gradle Build Script",
+                    "Implementation-Title": "Ceres Native Libraries, ${project.ext.platformClassifier}",
+                    "Implementation-Version": pubVersion,
+                    "Implementation-Vendor": "Google",
+
+                    "Bundle-Name": "${archiveBaseName.get()}",
+                    "Bundle-Version": pubVersion,
+                    "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
+                    "Bundle-Vendor": "WPILib")
+        }
+
+        from(licenseFile) {
+            into '/'
+        }
+
+        if buildType.contains('Debug') {
+            if (!project.platform.startsWith("windows")) {
+                def resolvedDir = staticBuildDir.resolve("lib")
+                if (project.platform.startsWith("osx")) {
+                    resolvedDir = resolvedDir.resolve(buildTypeFolder)
+                }
+                from("/vcpkg/installed/${triplet}/debug/lib") {
+                    into project.platformPath + '/static'
+                    include '**/*.a'
+                }
+            } else {
+                from("/vcpkg/installed/${triplet}/debug/lib") {
+                    into project.platformPath + '/static'
+                    include '**/*.lib'
+                    include '**/*.pdb'
+                }
+            }
+        } else {
+            if (!project.platform.startsWith("windows")) {
+                def resolvedDir = staticBuildDir.resolve("lib")
+                if (project.platform.startsWith("osx")) {
+                    resolvedDir = resolvedDir.resolve(buildTypeFolder)
+                }
+                from("/vcpkg/installed/${triplet}/lib") {
+                    into project.platformPath + '/static'
+                    include '**/*.a'
+                }
+            } else {
+                from("/vcpkg/installed/${triplet}/lib") {
+                    into project.platformPath + '/static'
+                    include '**/*.lib'
+                    include '**/*.pdb'
+                }
+            }
+        }
+    }
+}
+
+
+if (!project.hasProperty('skipRelease')) {
+    build.dependsOn cppLibsZipStatic
+    addTaskToCopyAllOutputs(cppLibsZipStatic)
+}
+
+if (!project.hasProperty('skipDebug')) {
+    build.dependsOn cppLibsZipStaticDebug
+
+    addTaskToCopyAllOutputs(cppLibsZipStaticDebug)
+}
+
+if (!project.hasProperty('skipSources')) {
+    build.dependsOn cppHeadersZip
+    build.dependsOn cppSourcesZip
+    addTaskToCopyAllOutputs(cppSourcesZip)
+    addTaskToCopyAllOutputs(cppHeadersZip)
+}
+
+if (!project.hasProperty('jenkinsBuild')) {
+    artifacts {
+        archives cppHeadersZip
+        archives cppSourcesZip
+        archives cppLibsZipStatic
+        archives cppLibsZipStaticDebug
+    }
+}
+
+model {
+    publishing {
+        publications {
+            cpp(MavenPublication) {
+                artifact cppHeadersZip
+                artifact cppSourcesZip
+                artifact cppLibsZipStatic
+                artifact cppLibsZipStaticDebug
+
+                artifactId = "${baseArtifactId}-cpp"
+                groupId artifactGroupId
+                version pubVersion
+            }
+        }
+        repositories {
+            maven {
+                url "${System.getProperty('user.home')}/releases/maven/${project.repo}"
+            }
+        }
+    }
+}
