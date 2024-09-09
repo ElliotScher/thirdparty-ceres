@@ -1,6 +1,14 @@
 import java.security.MessageDigest
+import org.gradle.internal.os.OperatingSystem
+
+import java.nio.file.Files
+import java.nio.file.Paths;
 
 apply plugin: 'maven-publish'
+
+configurations {
+    archives
+}
 
 publishing {
     repositories {
@@ -13,7 +21,7 @@ publishing {
     }
 }
 
-def pubVersion = "${project.ext.version}-1"
+def pubVersion = "${project.version}-1"
 
 def outputsFolder = file("$project.buildDir/outputs")
 
@@ -22,6 +30,78 @@ def artifactGroupId = 'edu.wpi.first.thirdparty.frc2024.ceres'
 def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2024_ceres_ID_ceres-cpp_CLS'
 
 def versionFile = file("$outputsFolder/version.txt")
+def licenseFile = file("LICENSE.md")
+
+def getPlatform() {
+    def platform
+    def os_name = System.getProperty("os.name")
+    def os_arch = System.getProperty("os.arch")
+
+    if (os_arch == 'amd64') {
+        os_arch = 'x86_64'
+    } else if (os_arch == 'i386') {
+        os_arch = 'x86'
+    } else if (os_arch == 'aarch64' || os_arch == 'arm64') {
+        os_arch = 'arm64'
+    }
+
+    if (OperatingSystem.current().isWindows()) {
+        platform = "windows-${os_arch}"
+    } else if (OperatingSystem.current().isLinux()) {
+        platform = "linux-${os_arch}"
+    } else if (OperatingSystem.current().isMacOsX()) {
+        platform = "osx-${os_arch}"
+    } else {
+        platform = "${os_name}-${os_arch}"
+    }
+    return platform
+}
+
+def getPlatformPath(platform) {
+    if (platform == "linux-athena") {
+        return "linux/athena"
+    } else if (platform == "linux-arm32") {
+        return "linux/arm32"
+    } else if (platform == "linux-arm64") {
+        return "linux/arm64"
+    } else if (platform == "linux-x86") {
+        return "linux/x86"
+    } else if (platform == "linux-x86_64") {
+        return "linux/x86-64"
+    } else if (platform == "osx-x86") {
+        return "osx/x86"
+    } else if (platform == "osx-x86_64") {
+        return "osx/x86-64"
+    } else if (platform == "osx-arm64") {
+        return "osx/arm64"
+    } else if (platform == "windows-x86") {
+        return "windows/x86"
+    } else if (platform == "windows-x86_64") {
+        return "windows/x86-64"
+    } else if (platform == "windows-arm64") {
+        return "windows/arm64"
+    } else {
+        return ""
+    }
+}
+
+task copyAllOutputs(type: Copy) {
+    destinationDir = outputsFolder
+}
+
+ext.addTaskToCopyAllOutputs = { task ->
+    copyAllOutputs.dependsOn task
+    copyAllOutputs.inputs.file task.archiveFile
+    copyAllOutputs.from task.archiveFile
+}
+
+ext.platform = getPlatform()
+ext.platformPath = getPlatformPath(ext.platform)
+ext.platformClassifier = project.platform.replaceFirst('-', '').replace('_', '-')
+
+ext.cmakeBuildDirectory = Paths.get(projectDir.canonicalPath).resolve('build').resolve(project.platformPath).resolve('buildStatic').resolve(project.platform)
+ext.cmakeBuildDebugDirectory = Paths.get(projectDir.canonicalPath).resolve('build').resolve(project.platformPath).resolve('buildStaticDebug').resolve(project.platform)
+ext.repo = "thirdparty-ceres"
 
 task outputVersions() {
     description = 'Prints the versions of this to a file for use by the downstream packaging project'
@@ -38,12 +118,7 @@ task outputVersions() {
     }
 }
 
-build.dependsOn outputVersions
-copyAllOutputs.dependsOn outputVersions
-copyAllOutputs.inputs.file versionFile
-copyAllOutputs.from versionFile
-
-task cppSourcesZip(type: Zip, dependsOn: make) {
+task cppSourcesZip(type: Zip) {
     destinationDirectory = outputsFolder
     archiveBaseName = zipBaseName
     archiveClassifier = "sources"
@@ -60,7 +135,7 @@ task cppSourcesZip(type: Zip, dependsOn: make) {
     includeEmptyDirs = false
 }
 
-task cppHeadersZip(type: Zip, dependsOn: make) {
+task cppHeadersZip(type: Zip) {
     destinationDirectory = outputsFolder
     archiveBaseName = zipBaseName
     archiveClassifier = "headers"
@@ -85,44 +160,42 @@ def triplet = baseDir.listFiles().find { file ->
 }
 
 
-['', 'Debug' ].each{ buildType ->
-
+['', 'Debug'].each { buildType ->
     def staticBuildDir = buildType.contains('Debug') ? project.cmakeBuildDebugDirectory : project.cmakeBuildDirectory
 
     def outputClassifier = project.ext.platformClassifier
     def outputClassifierStatic = project.ext.platformClassifier + 'static'
     if (buildType.contains('Debug')) {
-        outputClassifier = outputClassifier + 'debug'
-        outputClassifierStatic = outputClassifierStatic + 'debug'
+        outputClassifier += 'debug'
+        outputClassifierStatic += 'debug'
     }
 
     def buildTypeFolder = buildType.contains('Debug') ? 'Debug' : 'Release'
 
-    project.tasks.create('cppLibsZipStatic' + buildType, Zip) {
-        dependsOn tasks.named('nativeLibLinks' + buildType)
+    project.tasks.create(name: 'cppLibsZipStatic' + buildType, type: Zip) {
         destinationDirectory = outputsFolder
         archiveClassifier = outputClassifierStatic
         archiveBaseName = zipBaseName
         duplicatesStrategy = 'exclude'
 
-        manifest {
-            attributes(
-                    "Created-By": "WPILib Gradle Build Script",
-                    "Implementation-Title": "Ceres Native Libraries, ${project.ext.platformClassifier}",
-                    "Implementation-Version": pubVersion,
-                    "Implementation-Vendor": "Google",
-
-                    "Bundle-Name": "${archiveBaseName.get()}",
-                    "Bundle-Version": pubVersion,
-                    "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
-                    "Bundle-Vendor": "WPILib")
-        }
+        // manifest {
+        //     attributes(
+        //             "Created-By": "WPILib Gradle Build Script",
+        //             "Implementation-Title": "Ceres Native Libraries, ${project.ext.platformClassifier}",
+        //             "Implementation-Version": pubVersion,
+        //             "Implementation-Vendor": "Google",
+        //             "Bundle-Name": "${archiveBaseName.get()}",
+        //             "Bundle-Version": pubVersion,
+        //             "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
+        //             "Bundle-Vendor": "WPILib"
+        //     )
+        // }
 
         from(licenseFile) {
             into '/'
         }
 
-        if buildType.contains('Debug') {
+        if (buildType.contains('Debug')) {
             if (!project.platform.startsWith("windows")) {
                 def resolvedDir = staticBuildDir.resolve("lib")
                 if (project.platform.startsWith("osx")) {
@@ -161,20 +234,16 @@ def triplet = baseDir.listFiles().find { file ->
 }
 
 
+
 if (!project.hasProperty('skipRelease')) {
-    build.dependsOn cppLibsZipStatic
     addTaskToCopyAllOutputs(cppLibsZipStatic)
 }
 
 if (!project.hasProperty('skipDebug')) {
-    build.dependsOn cppLibsZipStaticDebug
-
     addTaskToCopyAllOutputs(cppLibsZipStaticDebug)
 }
 
 if (!project.hasProperty('skipSources')) {
-    build.dependsOn cppHeadersZip
-    build.dependsOn cppSourcesZip
     addTaskToCopyAllOutputs(cppSourcesZip)
     addTaskToCopyAllOutputs(cppHeadersZip)
 }
