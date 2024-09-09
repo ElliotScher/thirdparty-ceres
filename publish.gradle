@@ -21,17 +21,6 @@ publishing {
     }
 }
 
-def pubVersion = "${project.version}-1"
-
-def outputsFolder = file("$project.buildDir/outputs")
-
-def baseArtifactId = 'ceres'
-def artifactGroupId = 'edu.wpi.first.thirdparty.frc2024.ceres'
-def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2024_ceres_ID_ceres-cpp_CLS'
-
-def versionFile = file("$outputsFolder/version.txt")
-def licenseFile = file("LICENSE.md")
-
 def getPlatform() {
     def platform
     def os_name = System.getProperty("os.name")
@@ -55,6 +44,31 @@ def getPlatform() {
         platform = "${os_name}-${os_arch}"
     }
     return platform
+}
+
+def getTriplet() {
+    def platform
+    def os_name = System.getProperty("os.name")
+    def os_arch = System.getProperty("os.arch")
+    def triplet_arch = ""
+    def triplet_name = ""
+
+    if (os_arch == 'amd64') {
+        triplet_arch = "x64"
+    } else if (os_arch == 'i386') {
+        triplet_arch = "x86"
+    } else if (os_arch == 'aarch64' || os_arch == 'arm64') {
+        triplet_arch = "arm64"
+    }
+
+    if (OperatingSystem.current().isWindows()) {
+        triplet_name = "windows"
+    } else if (OperatingSystem.current().isLinux()) {
+        triplet_name = "linux"
+    } else if (OperatingSystem.current().isMacOsX()) {
+        triplet_name = "osx"
+    }
+    return triplet_arch + "-" + triplet_name
 }
 
 def getPlatformPath(platform) {
@@ -85,6 +99,33 @@ def getPlatformPath(platform) {
     }
 }
 
+ext.platform = getPlatform()
+ext.platformPath = getPlatformPath(ext.platform)
+ext.platformClassifier = project.platform.replaceFirst('-', '').replace('_', '-')
+
+ext.repo = "thirdparty-ceres"
+
+def triplet = getTriplet()
+
+def pubVersion = "${project.version}-1"
+
+def outputsFolder = file("$project.buildDir/outputs")
+
+def baseArtifactId = 'ceres'
+def artifactGroupId = 'edu.wpi.first.thirdparty.frc2024.ceres'
+def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2024_ceres_ID_ceres-cpp_CLS'
+
+def versionFile = file("$outputsFolder/version.txt")
+def licenseFile = file("LICENSE.md")
+
+
+def baseDir = file('/vcpkg/installed/')
+def knownSubdirName = 'vcpkg'
+
+def outputClassifierStatic = project.ext.platformClassifier + 'static'
+def outputClassifierDebugStatic = project.ext.platformClassifier + 'debug/static'
+
+
 task copyAllOutputs(type: Copy) {
     destinationDir = outputsFolder
 }
@@ -94,14 +135,6 @@ ext.addTaskToCopyAllOutputs = { task ->
     copyAllOutputs.inputs.file task.archiveFile
     copyAllOutputs.from task.archiveFile
 }
-
-ext.platform = getPlatform()
-ext.platformPath = getPlatformPath(ext.platform)
-ext.platformClassifier = project.platform.replaceFirst('-', '').replace('_', '-')
-
-ext.cmakeBuildDirectory = Paths.get(projectDir.canonicalPath).resolve('build').resolve(project.platformPath).resolve('buildStatic').resolve(project.platform)
-ext.cmakeBuildDebugDirectory = Paths.get(projectDir.canonicalPath).resolve('build').resolve(project.platformPath).resolve('buildStaticDebug').resolve(project.platform)
-ext.repo = "thirdparty-ceres"
 
 task outputVersions() {
     description = 'Prints the versions of this to a file for use by the downstream packaging project'
@@ -126,8 +159,8 @@ task cppSourcesZip(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-
-    from('/vcpkg/buildtrees') {
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("buildtrees")
+    from(resolvedDir.toFile()) {
         into '/source'
         include '**/*.cpp', '**/*.cc'
     }
@@ -143,8 +176,8 @@ task cppHeadersZip(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-
-    from('/vcpkg/buildtrees') {
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("buildtrees")
+    from(resolvedDir.toFile()) {
         into '/include'
         include '**/*.hpp', '**/*.h'
     }
@@ -152,88 +185,41 @@ task cppHeadersZip(type: Zip) {
     includeEmptyDirs = false
 }
 
-def baseDir = file('/vcpkg/installed/')
-def knownSubdirName = 'vcpkg'
+task cppLibsZipStatic(type: Zip) {
+    destinationDirectory = outputsFolder
+    archiveClassifier = outputClassifierStatic
+    archiveBaseName = zipBaseName
+    duplicatesStrategy = 'exclude'
 
-def triplet = baseDir.listFiles().find { file ->
-    file.isDirectory() && file.name != knownSubdirName
-}
-
-
-['', 'Debug'].each { buildType ->
-    def staticBuildDir = buildType.contains('Debug') ? project.cmakeBuildDebugDirectory : project.cmakeBuildDirectory
-
-    def outputClassifier = project.ext.platformClassifier
-    def outputClassifierStatic = project.ext.platformClassifier + 'static'
-    if (buildType.contains('Debug')) {
-        outputClassifier += 'debug'
-        outputClassifierStatic += 'debug'
+    from(licenseFile) {
+        into '/'
     }
-
-    def buildTypeFolder = buildType.contains('Debug') ? 'Debug' : 'Release'
-
-    project.tasks.create(name: 'cppLibsZipStatic' + buildType, type: Zip) {
-        destinationDirectory = outputsFolder
-        archiveClassifier = outputClassifierStatic
-        archiveBaseName = zipBaseName
-        duplicatesStrategy = 'exclude'
-
-        // manifest {
-        //     attributes(
-        //             "Created-By": "WPILib Gradle Build Script",
-        //             "Implementation-Title": "Ceres Native Libraries, ${project.ext.platformClassifier}",
-        //             "Implementation-Version": pubVersion,
-        //             "Implementation-Vendor": "Google",
-        //             "Bundle-Name": "${archiveBaseName.get()}",
-        //             "Bundle-Version": pubVersion,
-        //             "Bundle-License": "https://opensource.org/licenses/BSD-3-Clause",
-        //             "Bundle-Vendor": "WPILib"
-        //     )
-        // }
-
-        from(licenseFile) {
-            into '/'
-        }
-
-        if (buildType.contains('Debug')) {
-            if (!project.platform.startsWith("windows")) {
-                def resolvedDir = staticBuildDir.resolve("lib")
-                if (project.platform.startsWith("osx")) {
-                    resolvedDir = resolvedDir.resolve(buildTypeFolder)
-                }
-                from("/vcpkg/installed/${triplet}/debug/lib") {
-                    into project.platformPath + '/static'
-                    include '**/*.a'
-                }
-            } else {
-                from("/vcpkg/installed/${triplet}/debug/lib") {
-                    into project.platformPath + '/static'
-                    include '**/*.lib'
-                    include '**/*.pdb'
-                }
-            }
-        } else {
-            if (!project.platform.startsWith("windows")) {
-                def resolvedDir = staticBuildDir.resolve("lib")
-                if (project.platform.startsWith("osx")) {
-                    resolvedDir = resolvedDir.resolve(buildTypeFolder)
-                }
-                from("/vcpkg/installed/${triplet}/lib") {
-                    into project.platformPath + '/static'
-                    include '**/*.a'
-                }
-            } else {
-                from("/vcpkg/installed/${triplet}/lib") {
-                    into project.platformPath + '/static'
-                    include '**/*.lib'
-                    include '**/*.pdb'
-                }
-            }
-        }
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("lib")
+    from(resolvedDir.toFile()) {
+        into project.platformPath + '/static'
+        include '**/*.a'
+        include '**/*.lib'
+        include '**/*.pdb'
     }
 }
 
+task cppLibsZipStaticDebug(type: Zip) {
+    destinationDirectory = outputsFolder
+    archiveClassifier = outputClassifierStatic + 'debug'
+    archiveBaseName = zipBaseName + 'debug'
+    duplicatesStrategy = 'exclude'
 
+    from(licenseFile) {
+        into '/'
+    }
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("debug").resolve("lib")
+    from(resolvedDir.toFile()) {
+        into project.platformPath + '/debug/static'
+        include '**/*.a'
+        include '**/*.lib'
+        include '**/*.pdb'
+    }
+}
 
 if (!project.hasProperty('skipRelease')) {
     addTaskToCopyAllOutputs(cppLibsZipStatic)
