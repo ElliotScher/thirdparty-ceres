@@ -144,7 +144,7 @@ task installPackages() {
     } else {
         exec {
             commandLine 'cd vcpkg'
-            commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
+            commandLine 'vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
         }
     }
 }
