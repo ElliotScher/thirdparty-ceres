@@ -144,9 +144,7 @@ task installPackages() {
     } else {
         exec {
             workingDir '/vcpkg'
-            commandLine './bootstrap-vcpkg.sh'
-            commandLine './vcpkg', 'integrate', 'install'
-            commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
+            commandLine '${{ github.workspace }}/vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
         }
     }
 }
