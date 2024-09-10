@@ -34,8 +34,6 @@ jobs:
           submodules: 'true'
       - run: sudo apt-get update && sudo apt-get install ant -y && sudo rm -rf /var/lib/apt/lists/* && sudo rm -f /bin/ant && sudo ln -s /usr/share/ant/bin/ant /bin/ant
         name: Install Ant
-      - run: sudo apt-get install curl git zip unzip tar cmake build-essential libxinerama-dev libxcursor-dev libglu1-mesa-dev pkg-config libx11-dev libxext-dev libxi-dev linux-libc-dev libxml2 python3-dev
-        name: install dependencies
       - run: rm -rf /usr/local/arm-linux-gnueabihf && curl -SL https://github.com/wpilibsuite/opensdk/releases/download/v2023-9/armhf-raspi-bullseye-2023-x86_64-linux-gnu-Toolchain-10.2.0.tgz | sh -c 'mkdir -p /usr/local && cd /usr/local && tar xzf - --strip-components=2'
         name: Replace arm32 compiler
         if: matrix.artifact-name == 'Arm32'
