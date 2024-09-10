@@ -94,10 +94,12 @@ jobs:
         with:
           runVcpkgInstall: true
           vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
-      - run: ls
-        name: show
       - run: vcpkg install
         name: install packages
+      - run: |
+          cd vcpkg_installed
+          ls
+        name: show
       - run: |
           @call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
           set PATH=%PATH%;%ANT_HOME%\bin
