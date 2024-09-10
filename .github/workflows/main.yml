@@ -94,6 +94,8 @@ jobs:
         with:
           runVcpkgInstall: true
           vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
+      - run: ls
+        name: show
       - run: vcpkg install
         name: install packages
       - run: |
@@ -148,7 +150,7 @@ jobs:
             vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
       - run: vcpkg install
         name: install packages
-      - run: ./gradlew publish -PjenkinsBuild -Pforcealternatemacbuild
+      - run: ./gradlew publish -Pforcealternatemacbuild
         name: Build with Gradle
       - uses: actions/upload-artifact@v4
         with:
