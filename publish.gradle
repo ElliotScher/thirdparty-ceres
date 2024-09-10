@@ -136,6 +136,19 @@ ext.addTaskToCopyAllOutputs = { task ->
     copyAllOutputs.from task.archiveFile
 }
 
+task installPackages() {
+    if (OperatingSystem.current().isWindows()) {
+        exec {
+            commandLine 'cmd', '/c', 'cd vcpkg && vcpkg.exe install ceres[suitesparse,eigensparse]'
+        }
+    } else {
+        exec {
+            workingDir 'vcpkg'
+            commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]'
+        }
+    }
+}
+
 task outputVersions() {
     description = 'Prints the versions of this to a file for use by the downstream packaging project'
     group = 'Build'
@@ -232,6 +245,10 @@ if (!project.hasProperty('skipDebug')) {
 if (!project.hasProperty('skipSources')) {
     addTaskToCopyAllOutputs(cppSourcesZip)
     addTaskToCopyAllOutputs(cppHeadersZip)
+}
+
+tasks.withType(PublishToMavenRepository).configureEach {
+    dependsOn installPackages
 }
 
 model {
