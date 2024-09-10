@@ -176,7 +176,7 @@ task cppHeadersZip(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("buildtrees")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("include")
     from(resolvedDir.toFile()) {
         into '/include'
         include '**/*.hpp', '**/*.h'
@@ -232,15 +232,6 @@ if (!project.hasProperty('skipDebug')) {
 if (!project.hasProperty('skipSources')) {
     addTaskToCopyAllOutputs(cppSourcesZip)
     addTaskToCopyAllOutputs(cppHeadersZip)
-}
-
-if (!project.hasProperty('jenkinsBuild')) {
-    artifacts {
-        archives cppHeadersZip
-        archives cppSourcesZip
-        archives cppLibsZipStatic
-        archives cppLibsZipStaticDebug
-    }
 }
 
 model {
