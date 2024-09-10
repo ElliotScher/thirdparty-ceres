@@ -159,7 +159,7 @@ task cppSourcesZip(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("buildtrees")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg_installed").resolve("buildtrees")
     from(resolvedDir.toFile()) {
         into '/source'
         include '**/*.cpp', '**/*.cc'
@@ -176,7 +176,7 @@ task cppHeadersZip(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("include")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg_installed").resolve(triplet).resolve("include")
     from(resolvedDir.toFile()) {
         into '/include'
         include '**/*.hpp', '**/*.h'
@@ -194,7 +194,7 @@ task cppLibsZipStatic(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("lib")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve(triplet).resolve("lib")
     from(resolvedDir.toFile()) {
         into project.platformPath + '/static'
         include '**/*.a'
@@ -212,7 +212,7 @@ task cppLibsZipStaticDebug(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve("installed").resolve(triplet).resolve("debug").resolve("lib")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg_installed").resolve(triplet).resolve("debug").resolve("lib")
     from(resolvedDir.toFile()) {
         into project.platformPath + '/debug/static'
         include '**/*.a'
@@ -239,7 +239,6 @@ model {
         publications {
             cpp(MavenPublication) {
                 artifact cppHeadersZip
-                artifact cppSourcesZip
                 artifact cppLibsZipStatic
                 artifact cppLibsZipStaticDebug
 
