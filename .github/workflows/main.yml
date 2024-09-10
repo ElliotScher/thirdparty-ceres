@@ -47,6 +47,8 @@ jobs:
               cd vcpkg
               ls
         name: run ls
+      - run: vcpkg install
+        name: install packages
       - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle
       - uses: actions/upload-artifact@v4
