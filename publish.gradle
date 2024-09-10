@@ -124,6 +124,7 @@ def knownSubdirName = 'vcpkg'
 
 def outputClassifierStatic = project.ext.platformClassifier + 'static'
 def outputClassifierDebugStatic = project.ext.platformClassifier + 'debug/static'
+System.out.println(triplet)
 
 
 task copyAllOutputs(type: Copy) {
@@ -160,7 +161,6 @@ task cppSourcesZip(type: Zip) {
         into '/'
     }
     def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg_installed").resolve("buildtrees")
-    System.out.println(resolvedDir)
     from(resolvedDir.toFile()) {
         into '/source'
         include '**/*.cpp', '**/*.cc'
