@@ -143,8 +143,9 @@ task installPackages() {
         }
     } else {
         exec {
-            workingDir './vcpkg'
-            commandLine 'bash', './vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
+            workingDir '/vcpkg'
+            commandLine './bootstrap-vcpkg.sh'
+            commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
         }
     }
 }
