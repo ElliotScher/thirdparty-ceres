@@ -194,7 +194,7 @@ task cppLibsZipStatic(type: Zip) {
     from(licenseFile) {
         into '/'
     }
-    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg").resolve(triplet).resolve("lib")
+    def resolvedDir = Paths.get(projectDir.canonicalPath).resolve("vcpkg_installed").resolve(triplet).resolve("lib")
     from(resolvedDir.toFile()) {
         into project.platformPath + '/static'
         include '**/*.a'
