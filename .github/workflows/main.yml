@@ -36,7 +36,8 @@ jobs:
         name: Install Ant
       - run: rm -rf /usr/local/arm-linux-gnueabihf && curl -SL https://github.com/wpilibsuite/opensdk/releases/download/v2023-9/armhf-raspi-bullseye-2023-x86_64-linux-gnu-Toolchain-10.2.0.tgz | sh -c 'mkdir -p /usr/local && cd /usr/local && tar xzf - --strip-components=2'
         name: Replace arm32 compiler
-      - run: git clone https://www.github.com/Microsoft/vcpkg.git && cd vcpkg && ./vcpkg install ceres[suitesparse,eigensparse]
+      - run: sudo apt install install_package curl git zip unzip tar cmake ninja-build build-essential libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config bison meson libx11-dev libxft-dev libxext-dev autoconf automake autoconf-archive libtool libxi-dev libxtst-dev nasm linux-libc-dev libxml2 libxml2-dev gfortran libsystemd-dev python3-jinja2 python3-dev openjdk-8-jdk liblist-moreutils-perl libsuitesparse-dev zenity
+        name: install dependencies
         if: matrix.artifact-name == 'Arm32'
       - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle

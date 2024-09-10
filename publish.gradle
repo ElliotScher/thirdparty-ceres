@@ -143,8 +143,7 @@ task installPackages() {
         }
     } else {
         exec {
-            workingDir 'vcpkg'
-            commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]'
+            commandLine './vcpkg/vcpkg', 'install', 'ceres[suitesparse,eigensparse]'
         }
     }
 }
