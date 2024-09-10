@@ -36,7 +36,6 @@ jobs:
           submodules: 'true'
       - uses: lukka/run-vcpkg@v11.5
         with:
-          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           runVcpkgInstall: true
           vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
       - run: sudo apt-get update && sudo apt-get install ant -y && sudo rm -rf /var/lib/apt/lists/* && sudo rm -f /bin/ant && sudo ln -s /usr/share/ant/bin/ant /bin/ant
