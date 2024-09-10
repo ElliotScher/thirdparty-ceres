@@ -94,6 +94,8 @@ jobs:
         with:
           runVcpkgInstall: true
           vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
+      - run: vcpkg install
+        name: install packages
       - run: |
           @call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
           set PATH=%PATH%;%ANT_HOME%\bin
@@ -116,6 +118,12 @@ jobs:
         with:
           java-version: 11
           distribution: 'zulu'
+      - uses: lukka/run-vcpkg@v11.5
+        with:
+            runVcpkgInstall: true
+            vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
+      - run: vcpkg install
+        name: install packages
       - run: ./gradlew publish
         name: Build with Gradle
       - uses: actions/upload-artifact@v4
@@ -138,6 +146,8 @@ jobs:
         with:
             runVcpkgInstall: true
             vcpkgGitCommitId: 'b4624c3a701b11248d88aab08744a37ee7aea1cc'
+      - run: vcpkg install
+        name: install packages
       - run: ./gradlew publish -PjenkinsBuild -Pforcealternatemacbuild
         name: Build with Gradle
       - uses: actions/upload-artifact@v4
