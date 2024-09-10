@@ -145,6 +145,7 @@ task installPackages() {
         exec {
             workingDir '/vcpkg'
             commandLine './bootstrap-vcpkg.sh'
+            commandLine './vcpkg', 'integrate', 'install'
             commandLine './vcpkg', 'install', 'ceres[suitesparse,eigensparse]' // The command to run
         }
     }
