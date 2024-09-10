@@ -41,6 +41,7 @@ jobs:
         uses: lukka/run-vcpkg@v11.5
         with:
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          runVcpkgInstall: true
       - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle
       - uses: actions/upload-artifact@v4
