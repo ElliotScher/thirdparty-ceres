@@ -59,6 +59,8 @@ def getTriplet() {
         triplet_arch = "x86"
     } else if (os_arch == 'aarch64' || os_arch == 'arm64') {
         triplet_arch = "arm64"
+    } else {
+        triplet_arch = "x64"
     }
 
     if (OperatingSystem.current().isWindows()) {
