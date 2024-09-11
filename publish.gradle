@@ -224,6 +224,20 @@ task cppLibsZipStaticDebug(type: Zip) {
     }
 }
 
+project.tasks.register('copyToUpload', Copy) {
+
+    mergeTasks.each {
+        dependsOn it
+        from it
+    }
+
+    constantFiles.each {
+        from it
+    }
+
+    into toUpload
+}
+
 if (!project.hasProperty('skipRelease')) {
     addTaskToCopyAllOutputs(cppLibsZipStatic)
 }
