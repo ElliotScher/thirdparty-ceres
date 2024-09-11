@@ -224,20 +224,6 @@ task cppLibsZipStaticDebug(type: Zip) {
     }
 }
 
-project.tasks.register('copyToUpload', Copy) {
-
-    mergeTasks.each {
-        dependsOn it
-        from it
-    }
-
-    constantFiles.each {
-        from it
-    }
-
-    into toUpload
-}
-
 if (!project.hasProperty('skipRelease')) {
     addTaskToCopyAllOutputs(cppLibsZipStatic)
 }
@@ -249,6 +235,10 @@ if (!project.hasProperty('skipDebug')) {
 if (!project.hasProperty('skipSources')) {
     addTaskToCopyAllOutputs(cppSourcesZip)
     addTaskToCopyAllOutputs(cppHeadersZip)
+}
+
+if (project.hasProperty('runmerge')) {
+    apply from: 'merge.gradle'
 }
 
 model {
