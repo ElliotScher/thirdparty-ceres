@@ -11,6 +11,8 @@ def constantNames = [
     'version.txt',
     'ceres-cpp_CLS-headers.zip',
     'ceres-cpp_CLS-sources.zip',
+    'ceres-cpp_CLS-linuxx86-64static.zip',
+    'ceres-cpp_CLS-linuxx86-64staticdebug.zip'
 ]
 
 def constantFiles = []
