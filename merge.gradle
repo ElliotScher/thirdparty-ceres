@@ -18,7 +18,7 @@ def mergeFiles = []
 downloadsFolder.eachFile {
     def found = false
     for (element in constantNames) {
-        System.out.println(element)
+        System.out.println(it)
       if (it.name.endsWith(element)) {
         constantFiles << it
         found = true
