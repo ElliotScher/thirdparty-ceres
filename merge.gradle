@@ -9,10 +9,7 @@ def files = project.files(downloadsFolder)
 
 def constantNames = [
     'version.txt',
-    'opencv-cpp_CLS-headers.zip',
-    'opencv-cpp_CLS-sources.zip',
-    'opencv-java_CLS-sources.jar',
-    'opencv_ID_opencv-java_CLS.jar'
+    'ceres-cpp_CLS-headers.zip',
 ]
 
 def constantFiles = []
