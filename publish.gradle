@@ -109,7 +109,7 @@ ext.repo = "thirdparty-ceres"
 
 def triplet = getTriplet()
 
-def pubVersion = "1-1"
+def pubVersion = "2.2-1"
 
 def outputsFolder = file("$project.buildDir/outputs")
 
@@ -119,10 +119,6 @@ def zipBaseName = '_GROUP_edu_wpi_first_thirdparty_frc2024_ceres_ID_ceres-cpp_CL
 
 def versionFile = file("$outputsFolder/version.txt")
 def licenseFile = file("LICENSE.md")
-
-
-def baseDir = file('/vcpkg/installed/')
-def knownSubdirName = 'vcpkg'
 
 def outputClassifierStatic = project.ext.platformClassifier + 'static'
 def outputClassifierDebugStatic = project.ext.platformClassifier + 'debug/static'
@@ -172,6 +168,7 @@ task cppSourcesZip(type: Zip) {
 }
 
 task cppHeadersZip(type: Zip) {
+    dependsOn outputVersions
     destinationDirectory = outputsFolder
     archiveBaseName = zipBaseName
     archiveClassifier = "headers"
@@ -240,6 +237,8 @@ if (!project.hasProperty('skipSources')) {
 if (project.hasProperty('runmerge')) {
     apply from: 'merge.gradle'
 }
+
+
 
 model {
     publishing {
