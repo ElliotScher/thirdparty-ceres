@@ -104,6 +104,7 @@ def getPlatformPath(platform) {
 ext.platform = getPlatform()
 ext.platformPath = getPlatformPath(ext.platform)
 ext.platformClassifier = project.platform.replaceFirst('-', '').replace('_', '-')
+ext.version = 1.0
 
 ext.repo = "thirdparty-ceres"
 
