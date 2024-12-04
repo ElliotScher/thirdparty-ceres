@@ -1,4 +1,3 @@
-import java.security.MessageDigest
 import org.gradle.internal.os.OperatingSystem
 
 import java.nio.file.Files
@@ -25,16 +24,29 @@ ext.version = "2.2"
 ext.libVersion = "${ext.version.replace(".", "")}"
 
 def getTriplet() {
-    def fileNameFinder = new FileNameFinder()
-    for (File folder : file("$projectDir/vcpkg_installed").listFiles()) {
-        if (folder.name == project.platform) {
-            println folder.name
-            return folder.name
-        } 
-    }
-    throw new RuntimeException("Platform not found");
-}
+    def triplet
+    def os_name = System.getProperty("os.name")
+    def os_arch = System.getProperty("os.arch")
 
+    if (os_arch == 'amd64') {
+        os_arch = 'x64'
+    } else if (os_arch == 'i386') {
+        os_arch = 'x86'
+    } else if (os_arch == 'aarch64' || os_arch == 'arm64') {
+        os_arch = 'arm64'
+    }
+
+    if (OperatingSystem.current().isWindows()) {
+        triplet = "${os_arch}-windows-static-md"
+    } else if (OperatingSystem.current().isLinux()) {
+        triplet = "${os_arch}-linux"
+    } else if (OperatingSystem.current().isMacOsX()) {
+        triplet = "${os_arch}-osx"
+    } else {
+        triplet = "${os_arch}-${os_name}"
+    }
+    return triplet
+}
 
 def getPlatformPath(triplet) {
     if (triplet == "arm32-linux") {
@@ -47,16 +59,30 @@ def getPlatformPath(triplet) {
         return "osx/x86-64"
     } else if (triplet == "arm64-osx") {
         return "osx/arm64"
-    } else if (triplet == "x64-windows") {
+    } else if (triplet == "x64-windows-static-md") {
         return "windows/x86-64"
-    } else if (triplet == "arm64-windows") {
+    } else if (triplet == "arm64-windows-static-md") {
         return "windows/arm64"
     } else {
         return ""
     }
 }
+def triplet
+if (!project.hasProperty('platform')) {
+    println "No 'platform' property specified; using the build system's platform"
+    triplet = getTriplet()
+} else {
+    triplet = project.platform
+}
 
-def triplet = getTriplet()
+if (project.hasProperty('forcealternatemacbuild')) {
+    if (project.platform == 'arm64-osx') {
+        triplet = 'x64-osx'
+    } else if (ext.platform == 'x64-osx') {
+        triplet = 'arm64-osx'
+    }
+}
+
 ext.platformPath = getPlatformPath(triplet)
 ext.platformClassifier = ext.platformPath.replaceFirst('/', '')
 
@@ -73,7 +99,7 @@ def versionFile = file("$outputsFolder/version.txt")
 def licenseFile = file("LICENSE.md")
 
 def outputClassifierStatic = project.ext.platformClassifier + 'static'
-System.out.println(triplet)
+println triplet
 
 task copyAllOutputs(type: Copy) {
     destinationDir = outputsFolder
@@ -83,6 +109,13 @@ ext.addTaskToCopyAllOutputs = { task ->
     copyAllOutputs.dependsOn task
     copyAllOutputs.inputs.file task.archiveFile
     copyAllOutputs.from task.archiveFile
+}
+
+task buildVcpkg(type: Exec) {
+    def baseArgs = ['install', "--overlay-ports=$rootDir/overlayPorts"]
+    outputs.dir "vcpkg_installed/$triplet"
+    executable "$rootDir/vcpkg/vcpkg"
+    args baseArgs + "--triplet=$triplet"
 }
 
 task outputVersions() {
@@ -115,6 +148,7 @@ task cppHeadersZip(type: Zip) {
     }
 
     includeEmptyDirs = false
+    dependsOn buildVcpkg
 }
 
 task mergeStaticLibs(type: Exec) {
@@ -225,6 +259,7 @@ task cppLibsZipStatic(type: Zip) {
         include "**/ceres${project.libVersion}.lib"
         include '**/*.pdb'
     }
+    dependsOn buildVcpkg
 }
 
 task cppLibsZipStaticDebug(type: Zip) {
@@ -245,6 +280,7 @@ task cppLibsZipStaticDebug(type: Zip) {
         include "**/ceres-debug${project.libVersion}.lib"
         include '**/*.pdb'
     }
+    dependsOn buildVcpkg
 }
 
 if (!project.hasProperty('skipRelease')) {

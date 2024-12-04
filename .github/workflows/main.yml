@@ -32,10 +32,10 @@ jobs:
       - uses: lukka/run-vcpkg@v11.5
         with:
           vcpkgGitCommitId: '29b2ea2d4b6197e66ef346e62ccbba35b55b7de5'
-      - run: vcpkg install
-        name: install packages
       - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle
+      - run: ls vcpkg_installed/*/lib/*
+        name: List dependent shared libraries
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
@@ -48,10 +48,10 @@ jobs:
         include:
           - artifact-name: WinArm64
             tool-arch: amd64_arm64
-            build-options: -Pplatform=arm64-windows
+            build-options: -Pplatform=arm64-windows-static-md
           - artifact-name: Win64
             tool-arch: amd64
-            build-options: -Pplatform=x64-windows
+            build-options:
 
     name: "Build - ${{ matrix.artifact-name }}"
     runs-on: windows-2019
@@ -69,46 +69,26 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1.13.0
         with:
           arch: ${{ matrix.tool-arch }}
-      - run: vcpkg install --triplet=arm64-windows
-        name: install packages
-        if: matrix.artifact-name == 'WinArm64'
-      - run: vcpkg install --triplet=x64-windows
-        name: install packages
-        if: matrix.artifact-name == 'Win64'
       - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle
+      - run: ls vcpkg_installed/*/bin/*
+        name: List dependent DLLs
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
           path: gradleDir/outputs/
 
   build-mac:
-    name: "Build - macOS"
-    runs-on: macOS-14
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-      - uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: 'temurin'
-      - run: brew install cmake ninja
-        name: install ninja
-      - uses: lukka/run-vcpkg@v11.5
-        with:
-            vcpkgGitCommitId: '29b2ea2d4b6197e66ef346e62ccbba35b55b7de5'
-      - run: vcpkg install --triplet=x64-osx
-        name: install packages
-      - run: ./gradlew publish -Pplatform=x64-osx
-        name: Build with Gradle
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macOS
-          path: gradleDir/outputs/
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact-name: macOSArm
+            build-options: -Pplatform=arm64-osx
+          - artifact-name: macOS
+            build-options: -Pplatform=x64-osx
 
-  build-mac-arm:
-    name: "Build - macOS (Arm)"
+    name: "Build - ${{ matrix.artifact-name }}"
     runs-on: macOS-14
     steps:
       - uses: actions/checkout@v4
@@ -123,18 +103,18 @@ jobs:
       - uses: lukka/run-vcpkg@v11.5
         with:
             vcpkgGitCommitId: '29b2ea2d4b6197e66ef346e62ccbba35b55b7de5'
-      - run: vcpkg install --triplet=arm64-osx
-        name: install packages
-      - run: ./gradlew publish -Pplatform=arm64-osx
+      - run: ./gradlew publish ${{ matrix.build-options }}
         name: Build with Gradle
+      - run: ls vcpkg_installed/*/lib/*
+        name: List dependent shared libraries
       - uses: actions/upload-artifact@v4
         with:
-          name: macOSArm
+          name: ${{ matrix.artifact-name }}
           path: gradleDir/outputs/
 
   make_universal:
     name: Make Universal
-    needs: [build-mac, build-mac-arm]
+    needs: [build-mac]
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
